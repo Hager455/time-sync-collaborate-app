@@ -1,21 +1,24 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { CalendarEvent } from "@/types/event";
-import { addDays, addHours, format, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { toast } from "sonner";
+import { eventService } from "@/api/eventService";
 
 interface EventContextType {
   events: CalendarEvent[];
-  addEvent: (event: Omit<CalendarEvent, "id">) => void;
-  updateEvent: (event: CalendarEvent) => void;
-  deleteEvent: (id: string) => void;
-  getEventsByDate: (date: Date) => CalendarEvent[];
-  getUpcomingEvents: (count?: number) => CalendarEvent[];
+  addEvent: (event: Omit<CalendarEvent, "id">) => Promise<CalendarEvent>;
+  updateEvent: (event: CalendarEvent) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+  getEventsByDate: (date: Date) => Promise<CalendarEvent[]>;
+  getUpcomingEvents: (count?: number) => Promise<CalendarEvent[]>;
+  loading: boolean;
+  error: string | null;
 }
 
 const EventContext = createContext<EventContextType | null>(null);
 
-// Sample events for demo purposes
+// Sample events for demo purposes - will be replaced with API data
 const generateSampleEvents = (): CalendarEvent[] => {
   const today = new Date();
   const tomorrow = addDays(today, 1);
@@ -70,47 +73,132 @@ const generateSampleEvents = (): CalendarEvent[] => {
 };
 
 export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [events, setEvents] = useState<CalendarEvent[]>(generateSampleEvents());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const addEvent = (eventData: Omit<CalendarEvent, "id">) => {
-    const newEvent: CalendarEvent = {
-      ...eventData,
-      id: `event-${Date.now()}`,
+  // Fetch all events when component mounts
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        // When backend is ready, use this:
+        // const fetchedEvents = await eventService.getAllEvents();
+        // setEvents(fetchedEvents);
+        
+        // Until backend is ready, use sample data:
+        setEvents(generateSampleEvents());
+        setError(null);
+      } catch (err) {
+        setError("Failed to fetch events. Using sample data instead.");
+        setEvents(generateSampleEvents());
+        console.error("Error fetching events:", err);
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    setEvents((prevEvents) => [...prevEvents, newEvent]);
-    toast.success("Event created successfully");
-    return newEvent;
+
+    fetchEvents();
+  }, []);
+
+  const addEvent = async (eventData: Omit<CalendarEvent, "id">): Promise<CalendarEvent> => {
+    try {
+      setLoading(true);
+      // When backend is ready, use this:
+      // const newEvent = await eventService.createEvent(eventData);
+      
+      // Until backend is ready, create a local event:
+      const newEvent: CalendarEvent = {
+        ...eventData,
+        id: `event-${Date.now()}`,
+      };
+      
+      setEvents((prevEvents) => [...prevEvents, newEvent]);
+      toast.success("Event created successfully");
+      return newEvent;
+    } catch (err) {
+      setError("Failed to create event");
+      toast.error("Failed to create event");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateEvent = (updatedEvent: CalendarEvent) => {
-    setEvents((prevEvents) =>
-      prevEvents.map((event) =>
-        event.id === updatedEvent.id ? updatedEvent : event
-      )
-    );
-    toast.success("Event updated successfully");
+  const updateEvent = async (updatedEvent: CalendarEvent): Promise<void> => {
+    try {
+      setLoading(true);
+      // When backend is ready, use this:
+      // await eventService.updateEvent(updatedEvent);
+      
+      // Until backend is ready, update locally:
+      setEvents((prevEvents) =>
+        prevEvents.map((event) =>
+          event.id === updatedEvent.id ? updatedEvent : event
+        )
+      );
+      toast.success("Event updated successfully");
+    } catch (err) {
+      setError("Failed to update event");
+      toast.error("Failed to update event");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteEvent = (id: string) => {
-    setEvents((prevEvents) => prevEvents.filter((event) => event.id !== id));
-    toast.success("Event deleted successfully");
+  const deleteEvent = async (id: string): Promise<void> => {
+    try {
+      setLoading(true);
+      // When backend is ready, use this:
+      // await eventService.deleteEvent(id);
+      
+      // Until backend is ready, delete locally:
+      setEvents((prevEvents) => prevEvents.filter((event) => event.id !== id));
+      toast.success("Event deleted successfully");
+    } catch (err) {
+      setError("Failed to delete event");
+      toast.error("Failed to delete event");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getEventsByDate = (date: Date): CalendarEvent[] => {
-    const dateString = format(date, "yyyy-MM-dd");
-    return events.filter((event) => {
-      const eventDateString = format(event.startTime, "yyyy-MM-dd");
-      return eventDateString === dateString;
-    });
+  const getEventsByDate = async (date: Date): Promise<CalendarEvent[]> => {
+    try {
+      // When backend is ready, use this:
+      // return await eventService.getEventsByDate(date);
+      
+      // Until backend is ready, filter locally:
+      const dateString = format(date, "yyyy-MM-dd");
+      return events.filter((event) => {
+        const eventDateString = format(event.startTime, "yyyy-MM-dd");
+        return eventDateString === dateString;
+      });
+    } catch (err) {
+      setError("Failed to fetch events by date");
+      console.error(`Error fetching events for date ${date}:`, err);
+      return [];
+    }
   };
 
-  const getUpcomingEvents = (count = 5): CalendarEvent[] => {
-    const now = new Date();
-    return events
-      .filter((event) => event.startTime > now)
-      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-      .slice(0, count);
+  const getUpcomingEvents = async (count = 5): Promise<CalendarEvent[]> => {
+    try {
+      // When backend is ready, use this:
+      // return await eventService.getUpcomingEvents(count);
+      
+      // Until backend is ready, filter locally:
+      const now = new Date();
+      return events
+        .filter((event) => event.startTime > now)
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+        .slice(0, count);
+    } catch (err) {
+      setError("Failed to fetch upcoming events");
+      console.error("Error fetching upcoming events:", err);
+      return [];
+    }
   };
 
   return (
@@ -122,6 +210,8 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         deleteEvent,
         getEventsByDate,
         getUpcomingEvents,
+        loading,
+        error
       }}
     >
       {children}
