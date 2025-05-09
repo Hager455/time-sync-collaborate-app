@@ -1,7 +1,6 @@
-
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { CalendarEvent } from "@/types/event";
-import { format } from "date-fns";
+import { format, addDays, addHours } from "date-fns";
 import { toast } from "sonner";
 import { eventService } from "@/api/eventService";
 
@@ -10,8 +9,8 @@ interface EventContextType {
   addEvent: (event: Omit<CalendarEvent, "id">) => Promise<CalendarEvent>;
   updateEvent: (event: CalendarEvent) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
-  getEventsByDate: (date: Date) => Promise<CalendarEvent[]>;
-  getUpcomingEvents: (count?: number) => Promise<CalendarEvent[]>;
+  getEventsByDate: (date: Date) => CalendarEvent[];
+  getUpcomingEvents: (count?: number) => CalendarEvent[];
   loading: boolean;
   error: string | null;
 }
@@ -165,7 +164,7 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const getEventsByDate = async (date: Date): Promise<CalendarEvent[]> => {
+  const getEventsByDate = (date: Date): CalendarEvent[] => {
     try {
       // When backend is ready, use this:
       // return await eventService.getEventsByDate(date);
@@ -183,7 +182,7 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const getUpcomingEvents = async (count = 5): Promise<CalendarEvent[]> => {
+  const getUpcomingEvents = (count = 5): CalendarEvent[] => {
     try {
       // When backend is ready, use this:
       // return await eventService.getUpcomingEvents(count);
